@@ -1,17 +1,18 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-#
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
-    text_changed = false;
-    current_file = "";
     ui->setupUi(this);
     ui->textEdit->setFocus();
-    connect(qApp, SIGNAL(lastWindowClosed()), this, SLOT(on_actionExit_triggered()));
-    connect(ui->textEdit, SIGNAL(texttext_changed()), this, SLOT(onTextChange()));
+    window_title = "Text Editor[*]";
+    setWindowTitle(windowTitle());
+    setCurrentFile(QString());
+    connect(ui->textEdit->document(), &QTextDocument::contentsChanged,
+                  this, &MainWindow::onTextChange);
+    //connect(ui->textEdit->document(), SIGNAL(contentsChanged()), this, SLOT(onTextChange()));
 }
 
 MainWindow::~MainWindow()
@@ -19,47 +20,62 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::on_actionOpen_triggered()
+void MainWindow::closeEvent(QCloseEvent *event)
 {
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Open File"), QString(),
-                tr("Text Files (*.txt);;C++ Files (*.cpp *.h)"));
-
-        if (!fileName.isEmpty()) {
-            QFile file(fileName);
-            if (!file.open(QIODevice::ReadOnly)) {
-                QMessageBox::critical(this, tr("Error"), tr("Could not open file"));
-                return;
-            }
-            current_file = fileName;
-            QTextStream in(&file);
-            ui->textEdit->setPlainText(in.readAll());
-            file.close();
-        }
+    if (changesSaved())
+    {
+        event->accept();
+    } else
+    {
+        event->ignore();
+    }
 }
 
-void MainWindow::on_actionSave_triggered()
+void MainWindow::on_actionNew_triggered()
+{
+    if (changesSaved())
+    {
+        ui->textEdit->clear();
+        setCurrentFile(QString());
+    }
+}
+
+void MainWindow::on_actionOpen_triggered()
+{
+    if(changesSaved())
+    {
+        QString file_name = QFileDialog::getOpenFileName(this, tr("Open File"), QString(),
+                    tr("Text Files (*.txt);;C++ Files (*.cpp *.h)"));
+        openFile(file_name);
+    }
+}
+
+bool MainWindow::on_actionSave_triggered()
 {
     if(current_file.isEmpty())
     {
-        on_actionSave_As_triggered();
+        return on_actionSave_As_triggered();
     } else
     {
-        QFile file(current_file);
-        if (!file.open(QIODevice::WriteOnly)) {
-            QMessageBox::critical(this, tr("Error"), tr("Could not open file"));
-            return;
-        }
-        QTextStream stream(&file);
-        stream << ui->textEdit->toPlainText();
-        stream.flush();
-        file.close();
-        text_changed = false;
+        return saveFile(current_file);
     }
+}
+
+bool MainWindow::on_actionSave_As_triggered()
+{
+    QString file_name = QFileDialog::getSaveFileName(this, tr("Save File"), QString(),
+               tr("Text Files (*.txt);;C++ Files (*.cpp *.h)"));
+    return saveFile(file_name);
 }
 
 void MainWindow::on_actionExit_triggered()
 {
-    if(text_changed)
+    if(changesSaved()) qApp->quit();
+}
+
+bool MainWindow::changesSaved()
+{
+    if(ui->textEdit->document()->isModified())
     {
         QMessageBox msgBox;
         msgBox.setText("The document has been modified.");
@@ -69,44 +85,76 @@ void MainWindow::on_actionExit_triggered()
         int ret = msgBox.exec();
         switch (ret)
         {
-          case QMessageBox::Save:
-              // Save was clicked
-              break;
-          case QMessageBox::Discard:
-              // Don't Save was clicked
-              break;
-          case QMessageBox::Cancel:
-              // Cancel was clicked
-              break;
-          default:
-              // should never be reached
-              break;
+            case QMessageBox::Save:
+                return on_actionSave_triggered();
+                break;
+            case QMessageBox::Discard:
+                return true;
+                break;
+            case QMessageBox::Cancel:
+                return false;
+                break;
+            default:
+                return false;
+                break;
         }
     }
-    //QDebug() << QString(text_changed);
-    qApp->quit();
+    return true;
 }
 
-void MainWindow::onTextChange()
-{
-    text_changed = true;
+void MainWindow::onTextChange(){
+
+    setWindowModified(ui->textEdit->document()->isModified());
 }
 
-void MainWindow::on_actionSave_As_triggered()
+bool MainWindow::saveFile(const QString &file_name)
 {
-    QString fileName = QFileDialog::getSaveFileName(this, tr("Save File"), QString(),
-               tr("Text Files (*.txt);;C++ Files (*.cpp *.h)"));
+    if (!file_name.isEmpty())
+    {
+        QFile file(file_name);
+        if (!file.open(QIODevice::WriteOnly))
+        {
+            QMessageBox::critical(this, tr("Error"), tr("Could not open file"));
+            return false;
+        }
+        setCurrentFile(file_name);
+        QTextStream stream(&file);
+        stream << ui->textEdit->toPlainText();
+        stream.flush();
+        file.close();
+        return true;
+    }
+    return false;
+}
 
-       if (!fileName.isEmpty()) {
-           QFile file(fileName);
-           if (!file.open(QIODevice::WriteOnly)) {
-               QMessageBox::critical(this, tr("Error"), tr("Could not open file"));
-               return;
-           }
-           current_file = fileName;
-           QTextStream stream(&file);
-           stream << ui->textEdit->toPlainText();
-           stream.flush();
-           file.close();
-       }
+void MainWindow::openFile(const QString &file_name)
+{
+    if (!file_name.isEmpty())
+    {
+        QFile file(file_name);
+        if(!file.open(QIODevice::ReadOnly))
+        {
+            QMessageBox::critical(this, tr("Error"), tr("Could not open file"));
+            return;
+        }
+        setCurrentFile(file_name);
+        QTextStream in(&file);
+        ui->textEdit->setPlainText(in.readAll());
+        file.close();
+    }
+}
+
+void MainWindow::setCurrentFile(const QString &file_name)
+{
+    current_file = file_name;
+    ui->textEdit->document()->setModified(false);
+    setWindowModified(false);
+    QString shown_name = current_file;
+    if (current_file.isEmpty()) shown_name = "untitled.txt";
+    setWindowTitle(shown_name + " - " + window_title);
+}
+
+void MainWindow::on_action_Remove_C_C_comments_triggered()
+{
+
 }
