@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include <QtDebug>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -156,5 +157,39 @@ void MainWindow::setCurrentFile(const QString &file_name)
 
 void MainWindow::on_action_Remove_C_C_comments_triggered()
 {
-
+    QTextDocument *cur_doc = ui->textEdit->document();
+    QString comment_open_1 = "//";
+    QString comment_open_2 = "/*";
+    QString comment_close_1 = "*/";
+    QTextCursor cursor(cur_doc);
+    for(;;)
+    {
+        qDebug() << "Cursor begin" << cur_doc->find(comment_open_1.left(1), cursor).position();
+        cursor = cur_doc->find(comment_open_1.left(1), cursor);
+        qDebug() << "Cursor find" << cur_doc->find(comment_open_1.left(1), cursor).position();
+        if(cursor.position() > 0)
+        {
+            if(cur_doc->characterAt(cursor.position()) == comment_open_1[1]
+                    && (cur_doc->characterAt(cursor.position() - 2) != comment_open_1[1]
+                        && cur_doc->characterAt(cursor.position() + 1) != comment_open_1[1]))
+            {
+                if(cursor.movePosition(QTextCursor::EndOfLine, QTextCursor::KeepAnchor))
+                {
+                    cursor.removeSelectedText();
+                }
+            } else if(cur_doc->characterAt(cursor.position()) == comment_open_2[1])
+            {
+                QTextCursor temp = cur_doc->find(comment_close_1, cursor.position() + 1);
+                if(temp.position() > 0)
+                {
+                    cursor.setPosition(temp.position(), QTextCursor::KeepAnchor);
+                    cursor.removeSelectedText();
+                } else
+                {
+                    QMessageBox::warning(this, tr("Error"), tr("Unterminated comment"));
+                    break;
+                }
+            }
+        } else break;
+    }
 }
