@@ -98,6 +98,7 @@
     </property>
     <addaction name="actionNew"/>
     <addaction name="actionOpen"/>
+    <addaction name="actionOpen_with_mouse_wheel"/>
     <addaction name="actionSave"/>
     <addaction name="actionSave_As"/>
     <addaction name="separator"/>
@@ -175,6 +176,11 @@
   <action name="action_Remove_C_C_comments">
    <property name="text">
     <string>&amp;Remove C/C++ comments</string>
+   </property>
+  </action>
+  <action name="actionOpen_with_mouse_wheel">
+   <property name="text">
+    <string>Open with mouse wheel</string>
    </property>
   </action>
  </widget>
