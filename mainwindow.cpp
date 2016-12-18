@@ -14,7 +14,9 @@ MainWindow::MainWindow(QWidget *parent) :
     wheel_units = 0;
     timer = new QTimer(this);
     buffer_doc = new QTextDocument();
-
+    list_view = new QListView(this);
+    list_view->setVisible(false);
+    std_open = true;
     // ---------------- connections
     connect(timer, SIGNAL(timeout()), this, SLOT(nullifyWheelUnits()));
     connect(ui->textEdit->document(), &QTextDocument::contentsChanged,
@@ -58,20 +60,21 @@ void MainWindow::on_actionNew_triggered()
     }
 }
 
-void MainWindow::on_actionOpen_triggered(bool std_open)
+void MainWindow::on_actionOpen_triggered()
 {
     if(changesSaved())
     {
         QString file_name = QFileDialog::getOpenFileName(this, tr("Open File"), QString(),
-                    tr("Text Files (*.txt);;C++ Files (*.cpp *.h)"));
-        openFile(file_name, std_open);
+                    tr("Text Files (*.txt);;C++ Files (*.cpp *.h)"));        
+        openFile(file_name);
     }
 }
 
 void MainWindow::on_actionOpen_with_mouse_wheel_triggered()
 {
     ui->textEdit->setPlaceholderText("Use mouse wheel to uncover text.");
-    on_actionOpen_triggered(false);
+    std_open = false;
+    on_actionOpen_triggered();
 }
 
 bool MainWindow::on_actionSave_triggered()
@@ -201,7 +204,7 @@ bool MainWindow::saveFile(const QString &file_name)
     return false;
 }
 
-void MainWindow::openFile(const QString &file_name, bool std_open)
+void MainWindow::openFile(const QString &file_name)
 {
     if (!file_name.isEmpty())
     {
@@ -248,5 +251,25 @@ void MainWindow::copyFromBufDoc(int wheel_units)
     }
     doc_cursor.insertText(buff_cursor.selectedText());
     buff_cursor.removeSelectedText();
+    if(buffer_doc->isEmpty()) std_open = true;
 }
 
+
+void MainWindow::on_actionPlain_text_triggered()
+{
+    if(!ui->textEdit->isVisible())
+    {
+        list_view->setVisible(false);
+        ui->textEdit->show();
+    }
+}
+
+void MainWindow::on_actionList_triggered()
+{
+    if(!list_view->isVisible())
+    {
+        ui->textEdit->setVisible(false);
+        list_view->show();
+    }
+
+}
