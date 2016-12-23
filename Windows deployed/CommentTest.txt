@@ -1,0 +1,16 @@
+//comment line
+
+uncomment line
+
+line splitted with//comment
+
+///wrong comment
+
+
+/*multyline
+
+comment*/
+
+/*/ wrong comment
+
+/* delete this /* and this */ not this */
